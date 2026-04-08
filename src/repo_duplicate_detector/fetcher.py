@@ -85,9 +85,7 @@ class GitHubFetcher:
                     f"GitHub API rate limit exceeded. Reset at {self.rate_limit_reset}"
                 )
 
-    def _get_cache_key(
-        self, method: str, url: str, params: Optional[Dict] = None
-    ) -> str:
+    def _get_cache_key(self, method: str, url: str, params: Optional[Dict] = None) -> str:
         """Generate cache key for request."""
         key_parts = [method, url]
         if params:
@@ -118,9 +116,7 @@ class GitHubFetcher:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(
-            (requests.RequestException, RateLimitError)
-        ),
+        retry=retry_if_exception_type((requests.RequestException, RateLimitError)),
         reraise=True,
     )
     def _make_request(
@@ -170,9 +166,7 @@ class GitHubFetcher:
                 raise InvalidRepositoryError(f"Resource not found: {url}")
 
             if response.status_code == 403:
-                raise RateLimitError(
-                    "GitHub API rate limit exceeded or access forbidden"
-                )
+                raise RateLimitError("GitHub API rate limit exceeded or access forbidden")
 
             response.raise_for_status()
 
@@ -236,9 +230,7 @@ class GitHubFetcher:
             logger.warning(f"Failed to get topics for {owner}/{repo}: {e}")
             return []
 
-    def get_repository_contributors(
-        self, owner: str, repo: str, per_page: int = 100
-    ) -> List[str]:
+    def get_repository_contributors(self, owner: str, repo: str, per_page: int = 100) -> List[str]:
         """
         Get list of repository contributors.
 
@@ -257,9 +249,7 @@ class GitHubFetcher:
 
         while len(contributors) < per_page:
             try:
-                data = self._make_request(
-                    "GET", url, params={"page": page, "per_page": per_page}
-                )
+                data = self._make_request("GET", url, params={"page": page, "per_page": per_page})
 
                 if isinstance(data, list):
                     for item in data:
@@ -403,9 +393,7 @@ class GitHubFetcher:
                 "remaining": self.rate_limit_remaining,
                 "reset": self.rate_limit_reset,
                 "reset_datetime": (
-                    datetime.fromtimestamp(self.rate_limit_reset)
-                    if self.rate_limit_reset
-                    else None
+                    datetime.fromtimestamp(self.rate_limit_reset) if self.rate_limit_reset else None
                 ),
                 "limit_data": data,
             }

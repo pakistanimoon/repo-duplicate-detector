@@ -75,4 +75,5 @@ class TestTopicSimilarity:
         topics1 = ["JavaScript", "React"]
         topics2 = ["javascript", "react"]
         score = similarity_metrics.calculate_topic_similarity(topics1, topics2)
+
         assert score == 1.0

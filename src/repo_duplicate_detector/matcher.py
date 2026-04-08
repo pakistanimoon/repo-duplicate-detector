@@ -169,9 +169,7 @@ class RepoMatcher:
         query_parts.append(f"stars:{stars_min}..{stars_max}")
 
         # Execute search
-        search_query = (
-            " ".join(query_parts) if query_parts else f"language:{language or 'python'}"
-        )
+        search_query = " ".join(query_parts) if query_parts else f"language:{language or 'python'}"
 
         try:
             results = self.fetcher.search_repositories(
@@ -236,10 +234,8 @@ class RepoMatcher:
         repo_list = list(repo_data.items())
 
         for i, (repo1_name, repo1_data) in enumerate(repo_list):
-            for repo2_name, repo2_data in repo_list[i + 1:]:
-                similarity = self.metrics.calculate_overall_similarity(
-                    repo1_data, repo2_data
-                )
+            for repo2_name, repo2_data in repo_list[i + 1 :]:
+                similarity = self.metrics.calculate_overall_similarity(repo1_data, repo2_data)
 
                 if similarity.overall_score >= threshold:
                     match = RepoMatch(repo1_data, repo2_data, similarity, "duplicate")
@@ -295,9 +291,9 @@ class RepoMatcher:
                 {
                     "size": len(cluster),
                     "repos": [r["full_name"] for r in cluster],
-                    "top_repo": max(
-                        cluster, key=lambda r: r.get("stargazers_count", 0)
-                    )["full_name"],
+                    "top_repo": max(cluster, key=lambda r: r.get("stargazers_count", 0))[
+                        "full_name"
+                    ],
                 }
                 for cluster in clusters
             ],
@@ -343,9 +339,7 @@ class RepoMatcher:
                 continue
 
             # Check similarity
-            similarity = self.metrics.calculate_overall_similarity(
-                source_repo, result
-            )
+            similarity = self.metrics.calculate_overall_similarity(source_repo, result)
 
             if similarity.overall_score >= threshold:
                 # Check if orphaned (not updated recently)
@@ -365,9 +359,7 @@ class RepoMatcher:
 
         return sorted(orphaned, key=lambda x: x["similarity_score"], reverse=True)
 
-    def _determine_match_type(
-        self, repo1: Dict, repo2: Dict, similarity: SimilarityResult
-    ) -> str:
+    def _determine_match_type(self, repo1: Dict, repo2: Dict, similarity: SimilarityResult) -> str:
         """Determine the type of match between two repositories."""
         if similarity.overall_score >= 0.95:
             return "duplicate"
@@ -376,9 +368,7 @@ class RepoMatcher:
         else:
             return "similar"
 
-    def _cluster_repositories(
-        self, repos: List[Dict], threshold: float = 0.7
-    ) -> List[List[Dict]]:
+    def _cluster_repositories(self, repos: List[Dict], threshold: float = 0.7) -> List[List[Dict]]:
         """
         Cluster similar repositories.
 
@@ -435,9 +425,7 @@ class RepoMatcher:
 
         try:
             last_update = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-            days_since_update = (
-                datetime.now(last_update.tzinfo) - last_update
-            ).days
+            days_since_update = (datetime.now(last_update.tzinfo) - last_update).days
             return days_since_update > days
         except Exception as e:
             logger.warning(f"Failed to parse updated_at: {e}")

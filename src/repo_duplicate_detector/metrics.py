@@ -177,9 +177,7 @@ class SimilarityMetrics:
 
         return intersection / union if union > 0 else 0.0
 
-    def calculate_language_similarity(
-        self, lang1: Optional[str], lang2: Optional[str]
-    ) -> float:
+    def calculate_language_similarity(self, lang1: Optional[str], lang2: Optional[str]) -> float:
         """
         Calculate language match score.
 
@@ -225,9 +223,7 @@ class SimilarityMetrics:
 
         return intersection / union if union > 0 else 0.0
 
-    def calculate_activity_similarity(
-        self, activity1: Dict, activity2: Dict
-    ) -> float:
+    def calculate_activity_similarity(self, activity1: Dict, activity2: Dict) -> float:
         """
         Calculate similarity based on activity patterns.
 
@@ -300,9 +296,7 @@ class SimilarityMetrics:
         weights = weights or default_weights
 
         # Calculate individual metrics
-        name_sim = self.calculate_name_similarity(
-            repo1.get("name", ""), repo2.get("name", "")
-        )
+        name_sim = self.calculate_name_similarity(repo1.get("name", ""), repo2.get("name", ""))
 
         desc_sim = self.calculate_description_similarity(
             repo1.get("description", ""), repo2.get("description", "")
@@ -312,9 +306,7 @@ class SimilarityMetrics:
             repo1.get("topics", []), repo2.get("topics", [])
         )
 
-        lang_sim = self.calculate_language_similarity(
-            repo1.get("language"), repo2.get("language")
-        )
+        lang_sim = self.calculate_language_similarity(repo1.get("language"), repo2.get("language"))
 
         contrib_sim = self.calculate_contributor_overlap(
             repo1.get("contributors", []), repo2.get("contributors", [])

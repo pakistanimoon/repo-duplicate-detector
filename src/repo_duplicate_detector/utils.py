@@ -66,13 +66,7 @@ def normalize_text(text: str) -> str:
     if not text:
         return ""
 
-    return (
-        text.lower()
-        .strip()
-        .replace("-", " ")
-        .replace("_", " ")
-        .replace(".", " ")
-    )
+    return text.lower().strip().replace("-", " ").replace("_", " ").replace(".", " ")
 
 
 def calculate_hash(data: str) -> str:

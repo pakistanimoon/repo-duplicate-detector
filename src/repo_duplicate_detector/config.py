@@ -49,19 +49,14 @@ class Config:
             timeout=int(os.getenv("API_TIMEOUT", "30")),
             max_requests_per_minute=int(os.getenv("MAX_REQUESTS_PER_MINUTE", "60")),
             retry_attempts=int(os.getenv("RETRY_ATTEMPTS", "3")),
-            name_similarity_threshold=float(
-                os.getenv("NAME_SIMILARITY_THRESHOLD", "0.6")
-            ),
-            overall_similarity_threshold=float(
-                os.getenv("OVERALL_SIMILARITY_THRESHOLD", "0.7")
-            ),
+            name_similarity_threshold=float(os.getenv("NAME_SIMILARITY_THRESHOLD", "0.6")),
+            overall_similarity_threshold=float(os.getenv("OVERALL_SIMILARITY_THRESHOLD", "0.7")),
             max_results=int(os.getenv("MAX_RESULTS", "50")),
             use_cache=os.getenv("USE_CACHE", "true").lower() == "true",
             cache_ttl=int(os.getenv("CACHE_TTL", "3600")),
             batch_size=int(os.getenv("BATCH_SIZE", "10")),
             concurrent_requests=int(os.getenv("CONCURRENT_REQUESTS", "5")),
-            use_semantic_matching=os.getenv("USE_SEMANTIC_MATCHING", "true").lower()
-            == "true",
+            use_semantic_matching=os.getenv("USE_SEMANTIC_MATCHING", "true").lower() == "true",
             semantic_model=os.getenv("SEMANTIC_MODEL", "all-MiniLM-L6-v2"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
         )
