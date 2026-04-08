@@ -4,7 +4,7 @@ Repository matcher for finding duplicates and similar repositories.
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .config import Config
 from .fetcher import GitHubFetcher
@@ -114,7 +114,9 @@ class RepoMatcher:
             return repo_data
 
         except Exception as exc:
-            logger.error("Failed to get repository data for %s/%s: %s", owner, repo, exc)
+            logger.error(
+                "Failed to get repository data for %s/%s: %s", owner, repo, exc
+            )
             raise
 
     def find_similar_repos(
@@ -166,7 +168,9 @@ class RepoMatcher:
         stars_max = stars + 100
         query_parts.append(f"stars:{stars_min}..{stars_max}")
 
-        search_query = " ".join(query_parts) if query_parts else f"language:{language or 'python'}"
+        search_query = (
+            " ".join(query_parts) if query_parts else f"language:{language or 'python'}"
+        )
 
         try:
             results = self.fetcher.search_repositories(
@@ -197,7 +201,7 @@ class RepoMatcher:
         self,
         repos: List[str],
         threshold: Optional[float] = None,
-    ) -> List[tuple[str, str, RepoMatch]]:
+    ) -> List[Tuple[str, str, RepoMatch]]:
         """
         Find duplicate repositories in a list.
 
@@ -221,12 +225,14 @@ class RepoMatcher:
             except Exception as exc:
                 logger.warning("Failed to get data for %s: %s", repo, exc)
 
-        duplicates: List[tuple[str, str, RepoMatch]] = []
+        duplicates: List[Tuple[str, str, RepoMatch]] = []
         repo_list = list(repo_data.items())
 
         for i, (repo1_name, repo1_data) in enumerate(repo_list):
             for repo2_name, repo2_data in repo_list[i + 1 :]:
-                similarity = self.metrics.calculate_overall_similarity(repo1_data, repo2_data)
+                similarity = self.metrics.calculate_overall_similarity(
+                    repo1_data, repo2_data
+                )
 
                 if similarity.overall_score >= threshold:
                     match = RepoMatch(repo1_data, repo2_data, similarity, "duplicate")
@@ -279,9 +285,9 @@ class RepoMatcher:
                 {
                     "size": len(cluster),
                     "repos": [r["full_name"] for r in cluster],
-                    "top_repo": max(cluster, key=lambda r: r.get("stargazers_count", 0))[
-                        "full_name"
-                    ],
+                    "top_repo": max(
+                        cluster, key=lambda r: r.get("stargazers_count", 0)
+                    )["full_name"],
                 }
                 for cluster in clusters
             ],
@@ -371,7 +377,7 @@ class RepoMatcher:
             return []
 
         clusters: List[List[Dict[str, Any]]] = []
-        assigned: set[int] = set()
+        assigned: set = set()
 
         for i, repo1 in enumerate(repos):
             if i in assigned:
