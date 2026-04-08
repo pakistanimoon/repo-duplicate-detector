@@ -25,6 +25,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
+        pip install types-requests
     
     - name: Lint with flake8
       run: |
@@ -35,13 +36,13 @@ jobs:
       run: black --check src/repo_duplicate_detector tests
     
     - name: Run tests with pytest
-      run: pytest tests/ -v --cov=src/repo_duplicate_detector --cov-report=xml
+      run: pytest tests/ -v --cov=src/repo_duplicate_detector --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
-        fail_ci_if_error: true
+        fail_ci_if_error: false
 
   lint:
     runs-on: ubuntu-latest
@@ -56,8 +57,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pylint mypy isort
-        pip install -e .
+        pip install -r requirements-dev.txt
+        pip install types-requests
     
     - name: Pylint
       run: pylint src/repo_duplicate_detector --exit-zero

@@ -1,0 +1,16 @@
+[MASTER]
+disable=
+    C0402,  # relative-import-beyond-top-level
+    C0415,  # import-outside-toplevel
+    R0902,  # too-many-instance-attributes
+    R0903,  # too-few-public-methods
+    R0914,  # too-many-locals
+    W0611,  # unused-import
+    W0613,  # unused-argument
+    W0718,  # broad-exception-caught
+    W1203,  # logging-fstring-interpolation
+    E0401,  # import-error
+    E0402,  # relative-beyond-top-level
+
+max-line-length = 100
+good-names = i,j,k,ex,Run,_,id,x

@@ -5,7 +5,7 @@ Utility functions for repo-duplicate-detector.
 import hashlib
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def parse_repo_url(repo_url: str) -> Dict[str, str]:
         path_parts = parsed.path.strip("/").split("/")
         if len(path_parts) >= 2 and parsed.hostname == "github.com":
             return {"owner": path_parts[0], "repo": path_parts[1]}
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.error("Failed to parse repository URL: %s", repo_url, exc_info=exc)
 
     raise InvalidRepositoryError(f"Invalid repository URL format: {repo_url}")

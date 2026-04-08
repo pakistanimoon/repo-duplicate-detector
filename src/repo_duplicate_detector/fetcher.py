@@ -23,7 +23,6 @@ from .exceptions import (
     NetworkError,
     RateLimitError,
 )
-from .utils import parse_repo_url
 
 logger = logging.getLogger(__name__)
 
