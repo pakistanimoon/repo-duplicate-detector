@@ -2,11 +2,12 @@
 Tests for GitHub API fetcher.
 """
 
-import pytest
 from unittest.mock import Mock, patch
 
-from repo_duplicate_detector.fetcher import CacheEntry, GitHubFetcher
+import pytest
+
 from repo_duplicate_detector.exceptions import InvalidRepositoryError
+from repo_duplicate_detector.fetcher import CacheEntry, GitHubFetcher
 
 
 class TestCacheEntry:

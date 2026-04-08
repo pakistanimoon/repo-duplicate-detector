@@ -2,12 +2,13 @@
 Tests for repository matcher.
 """
 
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+
+from repo_duplicate_detector.exceptions import InvalidRepositoryError
 from repo_duplicate_detector.matcher import RepoMatch, RepoMatcher
 from repo_duplicate_detector.metrics import SimilarityResult
-from repo_duplicate_detector.exceptions import InvalidRepositoryError
 
 
 class TestRepoMatch:

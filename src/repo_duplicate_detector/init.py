@@ -12,15 +12,15 @@ __version__ = "0.1.0"
 __author__ = "pakistanimoon"
 __license__ = "MIT"
 
-from .matcher import RepoMatcher
-from .fetcher import GitHubFetcher
-from .metrics import SimilarityMetrics
 from .exceptions import (
-    RepoDetectorError,
     GitHubAPIError,
     InvalidRepositoryError,
     RateLimitError,
+    RepoDetectorError,
 )
+from .fetcher import GitHubFetcher
+from .matcher import RepoMatcher
+from .metrics import SimilarityMetrics
 
 __all__ = [
     "RepoMatcher",
