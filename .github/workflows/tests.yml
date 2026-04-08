@@ -26,6 +26,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         pip install types-requests
+        pip install -e .
     
     - name: Lint with flake8
       run: |
@@ -59,6 +60,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         pip install types-requests
+        pip install -e .
     
     - name: Pylint
       run: pylint src/repo_duplicate_detector --exit-zero
