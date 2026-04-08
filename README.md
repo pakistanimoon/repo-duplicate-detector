@@ -105,3 +105,4 @@ duplicates = matcher.find_duplicates_in_list
 - ChatGPT
 - Visual Studio
 - Github Dev
+- Claude
