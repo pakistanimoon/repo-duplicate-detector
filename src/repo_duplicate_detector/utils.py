@@ -3,7 +3,6 @@ Utility functions for repo-duplicate-detector.
 """
 
 import hashlib
-import json
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -47,8 +46,8 @@ def parse_repo_url(repo_url: str) -> Dict[str, str]:
         path_parts = parsed.path.strip("/").split("/")
         if len(path_parts) >= 2 and parsed.hostname == "github.com":
             return {"owner": path_parts[0], "repo": path_parts[1]}
-    except Exception as e:
-        logger.error(f"Failed to parse repository URL: {repo_url}", exc_info=e)
+    except Exception as exc:
+        logger.error("Failed to parse repository URL: %s", repo_url, exc_info=exc)
 
     raise InvalidRepositoryError(f"Invalid repository URL format: {repo_url}")
 
@@ -96,7 +95,7 @@ def chunk_list(items: List[Any], chunk_size: int) -> List[List[Any]]:
     return [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
 
 
-def safe_get(data: Dict, key: str, default: Any = None) -> Any:
+def safe_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:
     """
     Safely get a value from a dictionary.
 
@@ -110,7 +109,7 @@ def safe_get(data: Dict, key: str, default: Any = None) -> Any:
     """
     if "." in key:
         keys = key.split(".")
-        value = data
+        value: Any = data
         for k in keys:
             if isinstance(value, dict):
                 value = value.get(k)
@@ -121,7 +120,7 @@ def safe_get(data: Dict, key: str, default: Any = None) -> Any:
     return data.get(key, default)
 
 
-def merge_dicts(*dicts: Dict) -> Dict:
+def merge_dicts(*dicts: Dict[str, Any]) -> Dict[str, Any]:
     """
     Merge multiple dictionaries.
 
@@ -131,14 +130,14 @@ def merge_dicts(*dicts: Dict) -> Dict:
     Returns:
         Merged dictionary
     """
-    result = {}
+    result: Dict[str, Any] = {}
     for d in dicts:
         if isinstance(d, dict):
             result.update(d)
     return result
 
 
-def format_bytes(bytes_value: int) -> str:
+def format_bytes(bytes_value: float) -> str:
     """
     Format bytes as human-readable string.
 
@@ -148,11 +147,12 @@ def format_bytes(bytes_value: int) -> str:
     Returns:
         Formatted string (e.g., "1.5 MB")
     """
+    val = float(bytes_value)
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if bytes_value < 1024.0:
-            return f"{bytes_value:.2f} {unit}"
-        bytes_value /= 1024.0
-    return f"{bytes_value:.2f} PB"
+        if val < 1024.0:
+            return f"{val:.2f} {unit}"
+        val /= 1024.0
+    return f"{val:.2f} PB"
 
 
 def is_valid_github_owner(owner: str) -> bool:
@@ -168,8 +168,6 @@ def is_valid_github_owner(owner: str) -> bool:
     if not owner or len(owner) > 39:
         return False
 
-    # GitHub usernames can contain alphanumeric characters and hyphens
-    # but cannot start or end with hyphens
     pattern = r"^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$"
     return bool(re.match(pattern, owner))
 
@@ -187,6 +185,5 @@ def is_valid_repo_name(repo: str) -> bool:
     if not repo or len(repo) > 100:
         return False
 
-    # Repository names can contain alphanumeric characters, hyphens, and underscores
     pattern = r"^[a-zA-Z0-9._-]+$"
     return bool(re.match(pattern, repo))

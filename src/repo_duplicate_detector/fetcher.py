@@ -23,7 +23,7 @@ from .exceptions import (
     NetworkError,
     RateLimitError,
 )
-from .utils import chunk_list, parse_repo_url, safe_get
+from .utils import parse_repo_url
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +54,8 @@ class GitHubFetcher:
         self.config = config or Config.from_env()
         self.cache: Dict[str, CacheEntry] = {}
         self.session = self._create_session()
-        self.rate_limit_remaining = None
-        self.rate_limit_reset = None
+        self.rate_limit_remaining: Optional[int] = None
+        self.rate_limit_reset: Optional[int] = None
 
     def _create_session(self) -> requests.Session:
         """Create and configure requests session."""
@@ -78,14 +78,14 @@ class GitHubFetcher:
         self.rate_limit_reset = int(response.headers.get("X-RateLimit-Reset", 0))
 
         if self.rate_limit_remaining == 0:
-            wait_time = self.rate_limit_reset - int(time.time())
+            wait_time = (self.rate_limit_reset or 0) - int(time.time())
             if wait_time > 0:
-                logger.warning(f"Rate limit reached. Waiting {wait_time} seconds.")
+                logger.warning("Rate limit reached. Waiting %s seconds.", wait_time)
                 raise RateLimitError(
                     f"GitHub API rate limit exceeded. Reset at {self.rate_limit_reset}"
                 )
 
-    def _get_cache_key(self, method: str, url: str, params: Optional[Dict] = None) -> str:
+    def _get_cache_key(self, method: str, url: str, params: Optional[Dict[str, Any]] = None) -> str:
         """Generate cache key for request."""
         key_parts = [method, url]
         if params:
@@ -99,10 +99,9 @@ class GitHubFetcher:
 
         entry = self.cache.get(key)
         if entry and not entry.is_expired():
-            logger.debug(f"Cache hit for {key}")
+            logger.debug("Cache hit for %s", key)
             return entry.data
 
-        # Clean up expired entry
         if entry:
             del self.cache[key]
 
@@ -123,9 +122,9 @@ class GitHubFetcher:
         self,
         method: str,
         url: str,
-        params: Optional[Dict] = None,
-        json_data: Optional[Dict] = None,
-    ) -> Dict:
+        params: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Make HTTP request with retry logic.
 
@@ -143,7 +142,6 @@ class GitHubFetcher:
             RateLimitError: If rate limit is exceeded
             NetworkError: If network connection fails
         """
-        # Check cache
         cache_key = self._get_cache_key(method, url, params)
         cached_data = self._get_from_cache(cache_key)
         if cached_data is not None:
@@ -158,10 +156,8 @@ class GitHubFetcher:
                 timeout=self.config.timeout,
             )
 
-            # Handle rate limiting
             self._handle_rate_limit(response)
 
-            # Handle HTTP errors
             if response.status_code == 404:
                 raise InvalidRepositoryError(f"Resource not found: {url}")
 
@@ -170,21 +166,20 @@ class GitHubFetcher:
 
             response.raise_for_status()
 
-            data = response.json() if response.text else {}
+            data: Dict[str, Any] = response.json() if response.text else {}
 
-            # Cache successful response
             self._set_cache(cache_key, data)
 
             return data
 
-        except requests.ConnectionError as e:
-            raise NetworkError(f"Network connection failed: {e}")
-        except requests.Timeout as e:
-            raise NetworkError(f"Request timeout: {e}")
-        except requests.HTTPError as e:
-            raise GitHubAPIError(f"HTTP error occurred: {e}")
+        except requests.ConnectionError as exc:
+            raise NetworkError(f"Network connection failed: {exc}") from exc
+        except requests.Timeout as exc:
+            raise NetworkError(f"Request timeout: {exc}") from exc
+        except requests.HTTPError as exc:
+            raise GitHubAPIError(f"HTTP error occurred: {exc}") from exc
 
-    def get_repository(self, owner: str, repo: str) -> Dict:
+    def get_repository(self, owner: str, repo: str) -> Dict[str, Any]:
         """
         Get repository information.
 
@@ -194,10 +189,6 @@ class GitHubFetcher:
 
         Returns:
             Repository data dictionary
-
-        Raises:
-            GitHubAPIError: If API request fails
-            InvalidRepositoryError: If repository not found
         """
         url = f"{self.config.api_base_url}/repos/{owner}/{repo}"
         return self._make_request("GET", url)
@@ -226,8 +217,8 @@ class GitHubFetcher:
             response.raise_for_status()
             data = response.json()
             return data.get("names", [])
-        except Exception as e:
-            logger.warning(f"Failed to get topics for {owner}/{repo}: {e}")
+        except Exception as exc:
+            logger.warning("Failed to get topics for %s/%s: %s", owner, repo, exc)
             return []
 
     def get_repository_contributors(self, owner: str, repo: str, per_page: int = 100) -> List[str]:
@@ -244,7 +235,7 @@ class GitHubFetcher:
         """
         url = f"{self.config.api_base_url}/repos/{owner}/{repo}/contributors"
 
-        contributors = []
+        contributors: List[str] = []
         page = 1
 
         while len(contributors) < per_page:
@@ -262,8 +253,8 @@ class GitHubFetcher:
                     break
 
                 page += 1
-            except Exception as e:
-                logger.warning(f"Failed to get page {page} of contributors: {e}")
+            except Exception as exc:
+                logger.warning("Failed to get page %s of contributors: %s", page, exc)
                 break
 
         return contributors[:per_page]
@@ -274,7 +265,7 @@ class GitHubFetcher:
         sort: str = "stars",
         order: str = "desc",
         per_page: int = 30,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Search repositories on GitHub.
 
@@ -286,9 +277,6 @@ class GitHubFetcher:
 
         Returns:
             List of repository data dictionaries
-
-        Raises:
-            GitHubAPIError: If search fails
         """
         url = f"{self.config.api_base_url}/search/repositories"
 
@@ -311,7 +299,7 @@ class GitHubFetcher:
         sort: str = "followers",
         order: str = "desc",
         per_page: int = 30,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Search users on GitHub.
 
@@ -339,7 +327,7 @@ class GitHubFetcher:
 
         return data.get("items", [])
 
-    def get_user_repositories(self, username: str, per_page: int = 30) -> List[Dict]:
+    def get_user_repositories(self, username: str, per_page: int = 30) -> List[Dict[str, Any]]:
         """
         Get repositories for a user.
 
@@ -352,7 +340,7 @@ class GitHubFetcher:
         """
         url = f"{self.config.api_base_url}/users/{username}/repos"
 
-        repos = []
+        repos: List[Dict[str, Any]] = []
         page = 1
 
         while len(repos) < per_page:
@@ -372,8 +360,8 @@ class GitHubFetcher:
                     break
 
                 page += 1
-            except Exception as e:
-                logger.warning(f"Failed to get page {page} of user repos: {e}")
+            except Exception as exc:
+                logger.warning("Failed to get page %s of user repos: %s", page, exc)
                 break
 
         return repos[:per_page]
@@ -397,18 +385,18 @@ class GitHubFetcher:
                 ),
                 "limit_data": data,
             }
-        except Exception as e:
-            logger.warning(f"Failed to get rate limit status: {e}")
+        except Exception as exc:
+            logger.warning("Failed to get rate limit status: %s", exc)
             return {}
 
     def close(self) -> None:
         """Close the requests session."""
         self.session.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "GitHubFetcher":
         """Context manager entry."""
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         """Context manager exit."""
         self.close()

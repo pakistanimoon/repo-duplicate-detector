@@ -3,10 +3,10 @@ Repository matcher for finding duplicates and similar repositories.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from .config import Config
-from .exceptions import GitHubAPIError, InvalidRepositoryError
 from .fetcher import GitHubFetcher
 from .metrics import SimilarityMetrics, SimilarityResult
 from .utils import parse_repo_url
@@ -18,12 +18,16 @@ class RepoMatch:
     """Result of repository matching."""
 
     def __init__(
-        self, repo1: Dict, repo2: Dict, similarity: SimilarityResult, match_type: str = "similar"
+        self,
+        repo1: Dict[str, Any],
+        repo2: Dict[str, Any],
+        similarity: SimilarityResult,
+        match_type: str = "similar",
     ):
         self.repo1 = repo1
         self.repo2 = repo2
         self.similarity = similarity
-        self.match_type = match_type  # "duplicate", "similar", "fork"
+        self.match_type = match_type
 
     def __repr__(self) -> str:
         return (
@@ -31,7 +35,7 @@ class RepoMatch:
             f"similarity={self.similarity.overall_score:.2%})"
         )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation."""
         return {
             "repo1": {
@@ -75,9 +79,9 @@ class RepoMatcher:
             use_semantic=self.config.use_semantic_matching,
             model_name=self.config.semantic_model,
         )
-        self._repo_cache: Dict[str, Dict] = {}
+        self._repo_cache: Dict[str, Dict[str, Any]] = {}
 
-    def _get_repo_data(self, owner: str, repo: str) -> Dict:
+    def _get_repo_data(self, owner: str, repo: str) -> Dict[str, Any]:
         """
         Get repository data with caching.
 
@@ -96,7 +100,6 @@ class RepoMatcher:
         try:
             repo_data = self.fetcher.get_repository(owner, repo)
 
-            # Enhance repo data
             repo_data["topics"] = self.fetcher.get_repository_topics(owner, repo)
             repo_data["contributors"] = self.fetcher.get_repository_contributors(
                 owner, repo, per_page=20
@@ -110,8 +113,8 @@ class RepoMatcher:
             self._repo_cache[cache_key] = repo_data
             return repo_data
 
-        except Exception as e:
-            logger.error(f"Failed to get repository data for {owner}/{repo}: {e}")
+        except Exception as exc:
+            logger.error("Failed to get repository data for %s/%s: %s", owner, repo, exc)
             raise
 
     def find_similar_repos(
@@ -137,57 +140,48 @@ class RepoMatcher:
             InvalidRepositoryError: If repository format is invalid
             GitHubAPIError: If GitHub API call fails
         """
-        # Parse repository
         parsed = parse_repo_url(repo)
         owner, repo_name = parsed["owner"], parsed["repo"]
 
         threshold = threshold or self.config.overall_similarity_threshold
         max_results = max_results or self.config.max_results
 
-        logger.info(f"Finding similar repos to {owner}/{repo_name}")
+        logger.info("Finding similar repos to %s/%s", owner, repo_name)
 
-        # Get source repository data
         source_repo = self._get_repo_data(owner, repo_name)
 
-        # Build search query
-        query_parts = []
+        query_parts: List[str] = []
 
         if source_repo.get("language"):
             query_parts.append(f"language:{source_repo['language']}")
         elif language:
             query_parts.append(f"language:{language}")
 
-        # Add topic-based query if available
         if source_repo.get("topics"):
             topic = source_repo["topics"][0]
             query_parts.append(f"topic:{topic}")
 
-        # Filter by stars range
         stars = source_repo.get("stargazers_count", 0)
         stars_min = max(0, stars - 100)
         stars_max = stars + 100
         query_parts.append(f"stars:{stars_min}..{stars_max}")
 
-        # Execute search
         search_query = " ".join(query_parts) if query_parts else f"language:{language or 'python'}"
 
         try:
             results = self.fetcher.search_repositories(
                 search_query, per_page=min(max_results * 2, 100)
             )
-        except Exception as e:
-            logger.warning(f"Search failed with query '{search_query}': {e}")
+        except Exception as exc:
+            logger.warning("Search failed with query '%s': %s", search_query, exc)
             return []
 
-        # Compare repositories
-        matches = []
+        matches: List[RepoMatch] = []
 
         for result in results:
-            # Skip the source repository itself
             if result["full_name"] == source_repo["full_name"]:
                 continue
 
-            # Compare
             similarity = self.metrics.calculate_overall_similarity(source_repo, result)
 
             if similarity.overall_score >= threshold:
@@ -195,7 +189,6 @@ class RepoMatcher:
                 match = RepoMatch(source_repo, result, similarity, match_type)
                 matches.append(match)
 
-        # Sort by similarity
         matches.sort(key=lambda m: m.similarity.overall_score, reverse=True)
 
         return matches[:max_results]
@@ -204,7 +197,7 @@ class RepoMatcher:
         self,
         repos: List[str],
         threshold: Optional[float] = None,
-    ) -> List[Tuple[RepoMatch, RepoMatch]]:
+    ) -> List[tuple[str, str, RepoMatch]]:
         """
         Find duplicate repositories in a list.
 
@@ -213,24 +206,22 @@ class RepoMatcher:
             threshold: Similarity threshold
 
         Returns:
-            List of duplicate repo pairs
+            List of duplicate repo tuples (repo1_name, repo2_name, match)
         """
         threshold = threshold or self.config.overall_similarity_threshold
 
-        logger.info(f"Analyzing {len(repos)} repositories for duplicates")
+        logger.info("Analyzing %s repositories for duplicates", len(repos))
 
-        # Get data for all repos
-        repo_data = {}
+        repo_data: Dict[str, Dict[str, Any]] = {}
         for repo in repos:
             try:
                 parsed = parse_repo_url(repo)
                 owner, repo_name = parsed["owner"], parsed["repo"]
                 repo_data[repo] = self._get_repo_data(owner, repo_name)
-            except Exception as e:
-                logger.warning(f"Failed to get data for {repo}: {e}")
+            except Exception as exc:
+                logger.warning("Failed to get data for %s: %s", repo, exc)
 
-        # Compare all pairs
-        duplicates = []
+        duplicates: List[tuple[str, str, RepoMatch]] = []
         repo_list = list(repo_data.items())
 
         for i, (repo1_name, repo1_data) in enumerate(repo_list):
@@ -248,7 +239,7 @@ class RepoMatcher:
         topic: str,
         language: Optional[str] = None,
         max_repos: int = 100,
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """
         Analyze ecosystem fragmentation for a topic.
 
@@ -260,9 +251,8 @@ class RepoMatcher:
         Returns:
             Ecosystem analysis dictionary
         """
-        logger.info(f"Analyzing ecosystem for topic: {topic}")
+        logger.info("Analyzing ecosystem for topic: %s", topic)
 
-        # Search for repositories
         query_parts = [f"topic:{topic}"]
         if language:
             query_parts.append(f"language:{language}")
@@ -273,15 +263,13 @@ class RepoMatcher:
             results = self.fetcher.search_repositories(
                 search_query, sort="stars", per_page=max_repos
             )
-        except Exception as e:
-            logger.error(f"Failed to search ecosystem: {e}")
+        except Exception as exc:
+            logger.error("Failed to search ecosystem: %s", exc)
             return {}
 
-        # Cluster similar repositories
         clusters = self._cluster_repositories(results)
 
-        # Analyze fragmentation
-        analysis = {
+        analysis: Dict[str, Any] = {
             "topic": topic,
             "language": language,
             "total_repos": len(results),
@@ -305,7 +293,7 @@ class RepoMatcher:
         self,
         original_repo: str,
         threshold: float = 0.95,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Find potentially abandoned forks of a repository.
 
@@ -316,33 +304,30 @@ class RepoMatcher:
         Returns:
             List of orphaned fork data dictionaries
         """
-        logger.info(f"Finding orphaned forks of {original_repo}")
+        logger.info("Finding orphaned forks of %s", original_repo)
 
         parsed = parse_repo_url(original_repo)
         owner, repo_name = parsed["owner"], parsed["repo"]
 
         source_repo = self._get_repo_data(owner, repo_name)
 
-        # Search for forks
         query = f"fork:true {source_repo['name']}"
 
         try:
             results = self.fetcher.search_repositories(query, per_page=50)
-        except Exception as e:
-            logger.warning(f"Failed to search for forks: {e}")
+        except Exception as exc:
+            logger.warning("Failed to search for forks: %s", exc)
             return []
 
-        orphaned = []
+        orphaned: List[Dict[str, Any]] = []
 
         for result in results:
             if result["full_name"] == source_repo["full_name"]:
                 continue
 
-            # Check similarity
             similarity = self.metrics.calculate_overall_similarity(source_repo, result)
 
             if similarity.overall_score >= threshold:
-                # Check if orphaned (not updated recently)
                 is_orphaned = self._is_fork_orphaned(result)
 
                 if is_orphaned:
@@ -359,16 +344,19 @@ class RepoMatcher:
 
         return sorted(orphaned, key=lambda x: x["similarity_score"], reverse=True)
 
-    def _determine_match_type(self, repo1: Dict, repo2: Dict, similarity: SimilarityResult) -> str:
+    def _determine_match_type(
+        self, repo1: Dict[str, Any], repo2: Dict[str, Any], similarity: SimilarityResult
+    ) -> str:
         """Determine the type of match between two repositories."""
         if similarity.overall_score >= 0.95:
             return "duplicate"
-        elif similarity.name_similarity >= 0.8 and similarity.topic_similarity >= 0.7:
+        if similarity.name_similarity >= 0.8 and similarity.topic_similarity >= 0.7:
             return "fork"
-        else:
-            return "similar"
+        return "similar"
 
-    def _cluster_repositories(self, repos: List[Dict], threshold: float = 0.7) -> List[List[Dict]]:
+    def _cluster_repositories(
+        self, repos: List[Dict[str, Any]], threshold: float = 0.7
+    ) -> List[List[Dict[str, Any]]]:
         """
         Cluster similar repositories.
 
@@ -382,14 +370,14 @@ class RepoMatcher:
         if not repos:
             return []
 
-        clusters: List[List[Dict]] = []
-        assigned = set()
+        clusters: List[List[Dict[str, Any]]] = []
+        assigned: set[int] = set()
 
         for i, repo1 in enumerate(repos):
             if i in assigned:
                 continue
 
-            cluster = [repo1]
+            cluster: List[Dict[str, Any]] = [repo1]
             assigned.add(i)
 
             for j, repo2 in enumerate(repos[i + 1 :], start=i + 1):
@@ -406,7 +394,7 @@ class RepoMatcher:
 
         return clusters
 
-    def _is_fork_orphaned(self, repo: Dict, days: int = 365) -> bool:
+    def _is_fork_orphaned(self, repo: Dict[str, Any], days: int = 365) -> bool:
         """
         Check if a fork appears to be orphaned.
 
@@ -417,8 +405,6 @@ class RepoMatcher:
         Returns:
             True if fork appears orphaned
         """
-        from datetime import datetime
-
         updated_at = repo.get("updated_at")
         if not updated_at:
             return True
@@ -427,18 +413,18 @@ class RepoMatcher:
             last_update = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
             days_since_update = (datetime.now(last_update.tzinfo) - last_update).days
             return days_since_update > days
-        except Exception as e:
-            logger.warning(f"Failed to parse updated_at: {e}")
+        except Exception as exc:
+            logger.warning("Failed to parse updated_at: %s", exc)
             return False
 
     def close(self) -> None:
         """Close connections and cleanup."""
         self.fetcher.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "RepoMatcher":
         """Context manager entry."""
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         """Context manager exit."""
         self.close()

@@ -12,9 +12,12 @@ __version__ = "0.1.0"
 __author__ = "pakistanimoon"
 __license__ = "MIT"
 
+from .config import Config
 from .exceptions import (
     GitHubAPIError,
+    InvalidConfigError,
     InvalidRepositoryError,
+    NetworkError,
     RateLimitError,
     RepoDetectorError,
 )
@@ -30,4 +33,7 @@ __all__ = [
     "GitHubAPIError",
     "InvalidRepositoryError",
     "RateLimitError",
+    "Config",
+    "InvalidConfigError",
+    "NetworkError",
 ]
