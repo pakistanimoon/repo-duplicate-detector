@@ -3,7 +3,8 @@ Pytest configuration and fixtures for repo-duplicate-detector tests.
 """
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+
 from repo_duplicate_detector.config import Config
 from repo_duplicate_detector.fetcher import GitHubFetcher
 from repo_duplicate_detector.matcher import RepoMatcher
