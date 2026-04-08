@@ -97,6 +97,7 @@ Find duplicates within a list of repositories.
 
 ```python
 duplicates = matcher.find_duplicates_in_list
+```
 
 ##### Digital Helpers
 
